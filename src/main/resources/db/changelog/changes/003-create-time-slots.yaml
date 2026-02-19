@@ -1,0 +1,60 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-time-slots
+      author: Yasseen
+      changes:
+        - createTable:
+            tableName: time_slots
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: calendar_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_time
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_time
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: FREE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+        - addForeignKeyConstraint:
+            baseTableName: time_slots
+            baseColumnNames: calendar_id
+            referencedTableName: calendars
+            referencedColumnNames: id
+            constraintName: fk_slot_calendar
+            onDelete: CASCADE
+        - sql:
+            sql: ALTER TABLE time_slots ADD CONSTRAINT chk_slot_times CHECK (end_time > start_time)
+        - sql:
+            sql: >
+              ALTER TABLE time_slots
+              ADD CONSTRAINT chk_slot_status
+              CHECK (status IN ('FREE', 'BUSY'))
+      rollback:
+        - dropTable:
+            tableName: time_slots

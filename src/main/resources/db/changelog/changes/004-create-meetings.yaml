@@ -1,0 +1,85 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-meetings
+      author: Yasseen
+      changes:
+        - createTable:
+            tableName: meetings
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: slot_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: organizer_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+        - addForeignKeyConstraint:
+            baseTableName: meetings
+            baseColumnNames: slot_id
+            referencedTableName: time_slots
+            referencedColumnNames: id
+            constraintName: fk_meeting_slot
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: meetings
+            baseColumnNames: organizer_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_meeting_organizer
+        - createTable:
+            tableName: meeting_participants
+            columns:
+              - column:
+                  name: meeting_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: meeting_participants
+            columnNames: meeting_id, user_id
+            constraintName: pk_meeting_participants
+        - addForeignKeyConstraint:
+            baseTableName: meeting_participants
+            baseColumnNames: meeting_id
+            referencedTableName: meetings
+            referencedColumnNames: id
+            constraintName: fk_participant_meeting
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: meeting_participants
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_participant_user
+      rollback:
+        - dropTable:
+            tableName: meeting_participants
+        - dropTable:
+            tableName: meetings

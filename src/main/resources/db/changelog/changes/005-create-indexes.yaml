@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-create-indexes
+      author: Yasseen
+      changes:
+        # supports range queries on time slots (hot path)
+        - createIndex:
+            indexName: idx_slots_calendar_range
+            tableName: time_slots
+            columns:
+              - column:
+                  name: calendar_id
+              - column:
+                  name: start_time
+              - column:
+                  name: end_time
+        # free/busy status filter queries
+        - createIndex:
+            indexName: idx_slots_calendar_status
+            tableName: time_slots
+            columns:
+              - column:
+                  name: calendar_id
+              - column:
+                  name: status
+        # "meetings I'm participating in" queries
+        - createIndex:
+            indexName: idx_participants_user
+            tableName: meeting_participants
+            columns:
+              - column:
+                  name: user_id
+        # organizer meeting lookups
+        - createIndex:
+            indexName: idx_meetings_organizer
+            tableName: meetings
+            columns:
+              - column:
+                  name: organizer_id
+      rollback:
+        - dropIndex:
+            indexName: idx_slots_calendar_range
+            tableName: time_slots
+        - dropIndex:
+            indexName: idx_slots_calendar_status
+            tableName: time_slots
+        - dropIndex:
+            indexName: idx_participants_user
+            tableName: meeting_participants
+        - dropIndex:
+            indexName: idx_meetings_organizer
+            tableName: meetings
