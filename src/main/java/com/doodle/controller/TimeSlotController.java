@@ -2,9 +2,12 @@ package com.doodle.controller;
 
 import com.doodle.dto.request.CreateSlotRequest;
 import com.doodle.dto.request.UpdateSlotRequest;
+import com.doodle.dto.response.PageResponse;
 import com.doodle.dto.response.TimeSlotResponse;
 import com.doodle.service.CurrentUserService;
 import com.doodle.service.TimeSlotService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -40,6 +43,8 @@ public class TimeSlotController {
         this.currentUserService = currentUserService;
     }
 
+    @Operation(summary = "Create a time slot")
+    @SecurityRequirement(name = "basicAuth")
     @PostMapping
     public ResponseEntity<TimeSlotResponse> createSlot(
             Authentication authentication,
@@ -50,8 +55,10 @@ public class TimeSlotController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "List my time slots in a range")
+    @SecurityRequirement(name = "basicAuth")
     @GetMapping
-    public Page<TimeSlotResponse> getSlotsInRange(
+    public PageResponse<TimeSlotResponse> getSlotsInRange(
             Authentication authentication,
             @RequestParam("from") Instant from,
             @RequestParam("to") Instant to,
@@ -59,15 +66,20 @@ public class TimeSlotController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         UUID userId = currentUserService.resolveUserId(authentication.getName());
-        return timeSlotService.getSlotsInRange(userId, from, to, PageRequest.of(page, size));
+        Page<TimeSlotResponse> result = timeSlotService.getSlotsInRange(userId, from, to, PageRequest.of(page, size));
+        return PageResponse.from(result);
     }
 
+    @Operation(summary = "Get a single time slot")
+    @SecurityRequirement(name = "basicAuth")
     @GetMapping("/{id}")
     public TimeSlotResponse getSlot(Authentication authentication, @PathVariable UUID id) {
         UUID userId = currentUserService.resolveUserId(authentication.getName());
         return timeSlotService.getSlot(userId, id);
     }
 
+    @Operation(summary = "Update a time slot")
+    @SecurityRequirement(name = "basicAuth")
     @PatchMapping("/{id}")
     public TimeSlotResponse updateSlot(
             Authentication authentication,
@@ -78,6 +90,8 @@ public class TimeSlotController {
         return timeSlotService.updateSlot(userId, id, request);
     }
 
+    @Operation(summary = "Delete a time slot")
+    @SecurityRequirement(name = "basicAuth")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteSlot(Authentication authentication, @PathVariable UUID id) {

@@ -3,8 +3,11 @@ package com.doodle.controller;
 import com.doodle.dto.request.ScheduleMeetingRequest;
 import com.doodle.dto.request.UpdateMeetingRequest;
 import com.doodle.dto.response.MeetingResponse;
+import com.doodle.dto.response.PageResponse;
 import com.doodle.service.CurrentUserService;
 import com.doodle.service.MeetingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -40,6 +43,8 @@ public class MeetingController {
         this.currentUserService = currentUserService;
     }
 
+    @Operation(summary = "Schedule a meeting on an owned slot")
+    @SecurityRequirement(name = "basicAuth")
     @PostMapping
     public ResponseEntity<MeetingResponse> scheduleMeeting(
             Authentication authentication,
@@ -50,8 +55,10 @@ public class MeetingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Operation(summary = "List my meetings in a range")
+    @SecurityRequirement(name = "basicAuth")
     @GetMapping
-    public Page<MeetingResponse> getMeetings(
+    public PageResponse<MeetingResponse> getMeetings(
             Authentication authentication,
             @RequestParam("from") Instant from,
             @RequestParam("to") Instant to,
@@ -59,15 +66,20 @@ public class MeetingController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         UUID userId = currentUserService.resolveUserId(authentication.getName());
-        return meetingService.getMeetings(userId, from, to, PageRequest.of(page, size));
+        Page<MeetingResponse> result = meetingService.getMeetings(userId, from, to, PageRequest.of(page, size));
+        return PageResponse.from(result);
     }
 
+    @Operation(summary = "Get a meeting by id")
+    @SecurityRequirement(name = "basicAuth")
     @GetMapping("/{id}")
     public MeetingResponse getMeeting(Authentication authentication, @PathVariable UUID id) {
         UUID userId = currentUserService.resolveUserId(authentication.getName());
         return meetingService.getMeeting(userId, id);
     }
 
+    @Operation(summary = "Update meeting details")
+    @SecurityRequirement(name = "basicAuth")
     @PatchMapping("/{id}")
     public MeetingResponse updateMeeting(
             Authentication authentication,
@@ -78,6 +90,8 @@ public class MeetingController {
         return meetingService.updateMeeting(userId, id, request);
     }
 
+    @Operation(summary = "Cancel a meeting")
+    @SecurityRequirement(name = "basicAuth")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void cancelMeeting(Authentication authentication, @PathVariable UUID id) {

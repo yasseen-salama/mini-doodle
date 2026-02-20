@@ -1,7 +1,7 @@
 package com.doodle.service;
 
 import com.doodle.domain.User;
-import com.doodle.exception.ResourceNotFoundException;
+import com.doodle.exception.ForbiddenException;
 import com.doodle.repository.UserRepository;
 import java.util.Locale;
 import java.util.UUID;
@@ -19,7 +19,7 @@ public class CurrentUserService {
     public UUID resolveUserId(String principalName) {
         String normalizedEmail = principalName.trim().toLowerCase(Locale.ROOT);
         User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+                .orElseThrow(() -> new ForbiddenException("Authenticated user not found"));
         return user.getId();
     }
 }

@@ -6,11 +6,14 @@ import com.doodle.domain.TimeSlot;
 import com.doodle.dto.request.CreateSlotRequest;
 import com.doodle.dto.request.UpdateSlotRequest;
 import com.doodle.dto.response.TimeSlotResponse;
+import com.doodle.exception.ForbiddenException;
 import com.doodle.exception.ResourceNotFoundException;
 import com.doodle.exception.SlotConflictException;
 import com.doodle.mapper.TimeSlotMapper;
 import com.doodle.repository.CalendarRepository;
 import com.doodle.repository.TimeSlotRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -26,15 +29,18 @@ public class TimeSlotService {
     private final TimeSlotRepository slotRepository;
     private final CalendarRepository calendarRepository;
     private final TimeSlotMapper mapper;
+    private final Counter slotsCreated;
 
     public TimeSlotService(
             TimeSlotRepository slotRepository,
             CalendarRepository calendarRepository,
-            TimeSlotMapper mapper
+            TimeSlotMapper mapper,
+            MeterRegistry meterRegistry
     ) {
         this.slotRepository = slotRepository;
         this.calendarRepository = calendarRepository;
         this.mapper = mapper;
+        this.slotsCreated = meterRegistry.counter("doodle.slots.created");
     }
 
     @Transactional
@@ -49,7 +55,9 @@ public class TimeSlotService {
         slot.setStartTime(req.startTime());
         slot.setEndTime(req.endTime());
         slot.setStatus(SlotStatus.FREE);
-        return mapper.toResponse(slotRepository.save(slot));
+        TimeSlot saved = slotRepository.save(slot);
+        slotsCreated.increment();
+        return mapper.toResponse(saved);
     }
 
     public Page<TimeSlotResponse> getSlotsInRange(UUID userId, Instant from, Instant to, Pageable pageable) {
@@ -102,7 +110,7 @@ public class TimeSlotService {
         TimeSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Time slot not found"));
         if (!slot.getCalendarId().equals(calendar.getId())) {
-            throw new ResourceNotFoundException("Time slot not found");
+            throw new ForbiddenException("You do not have access to this slot");
         }
         return slot;
     }

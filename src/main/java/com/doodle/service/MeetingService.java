@@ -8,6 +8,7 @@ import com.doodle.domain.User;
 import com.doodle.dto.request.ScheduleMeetingRequest;
 import com.doodle.dto.request.UpdateMeetingRequest;
 import com.doodle.dto.response.MeetingResponse;
+import com.doodle.exception.ForbiddenException;
 import com.doodle.exception.ResourceNotFoundException;
 import com.doodle.exception.SlotConflictException;
 import com.doodle.mapper.MeetingMapper;
@@ -15,6 +16,8 @@ import com.doodle.repository.CalendarRepository;
 import com.doodle.repository.MeetingRepository;
 import com.doodle.repository.TimeSlotRepository;
 import com.doodle.repository.UserRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
@@ -35,19 +38,22 @@ public class MeetingService {
     private final CalendarRepository calendarRepository;
     private final UserRepository userRepository;
     private final MeetingMapper mapper;
+    private final Counter meetingsScheduled;
 
     public MeetingService(
             MeetingRepository meetingRepository,
             TimeSlotRepository slotRepository,
             CalendarRepository calendarRepository,
             UserRepository userRepository,
-            MeetingMapper mapper
+            MeetingMapper mapper,
+            MeterRegistry meterRegistry
     ) {
         this.meetingRepository = meetingRepository;
         this.slotRepository = slotRepository;
         this.calendarRepository = calendarRepository;
         this.userRepository = userRepository;
         this.mapper = mapper;
+        this.meetingsScheduled = meterRegistry.counter("doodle.meetings.scheduled");
     }
 
     @Transactional
@@ -73,9 +79,11 @@ public class MeetingService {
         meeting.setParticipants(participants);
 
         slot.setStatus(SlotStatus.BUSY);
-        slotRepository.save(slot);
+        slotRepository.saveAndFlush(slot);
 
-        return mapper.toResponse(meetingRepository.save(meeting));
+        Meeting saved = meetingRepository.save(meeting);
+        meetingsScheduled.increment();
+        return mapper.toResponse(saved);
     }
 
     public Page<MeetingResponse> getMeetings(UUID userId, Instant from, Instant to, Pageable pageable) {
@@ -128,7 +136,7 @@ public class MeetingService {
         TimeSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("Time slot not found"));
         if (!slot.getCalendarId().equals(calendar.getId())) {
-            throw new ResourceNotFoundException("Time slot not found");
+            throw new ForbiddenException("You do not own this slot");
         }
         return slot;
     }
@@ -140,7 +148,7 @@ public class MeetingService {
         boolean isParticipant = meeting.getParticipants().stream()
                 .anyMatch(user -> user.getId().equals(userId));
         if (!isOrganizer && !isParticipant) {
-            throw new ResourceNotFoundException("Meeting not found");
+            throw new ForbiddenException("You do not have access to this meeting");
         }
         return meeting;
     }
@@ -149,7 +157,7 @@ public class MeetingService {
         Meeting meeting = meetingRepository.findByIdWithParticipants(meetingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meeting not found"));
         if (!meeting.getOrganizerId().equals(userId)) {
-            throw new ResourceNotFoundException("Meeting not found");
+            throw new ForbiddenException("Only organizer can modify this meeting");
         }
         return meeting;
     }

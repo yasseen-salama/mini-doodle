@@ -2,6 +2,8 @@ package com.doodle.controller;
 
 import com.doodle.dto.response.AvailabilityResponse;
 import com.doodle.service.AvailabilityService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,8 @@ public class AvailabilityController {
         this.availabilityService = availabilityService;
     }
 
+    @Operation(summary = "Get a user's availability windows in a range")
+    @SecurityRequirement(name = "basicAuth")
     @GetMapping
     public AvailabilityResponse getAvailability(
             @RequestParam("userId") UUID userId,
