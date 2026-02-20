@@ -15,5 +15,8 @@ databaseChangeLog:
       file: db/changelog/changes/005-create-indexes.yaml
       relativeToChangelogFile: false
   - include:
+      file: db/changelog/changes/006-add-time-slot-version.yaml
+      relativeToChangelogFile: false
+  - include:
       file: db/changelog/changes/000-seed-dev-users.yaml
       relativeToChangelogFile: false
