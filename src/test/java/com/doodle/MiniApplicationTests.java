@@ -1,10 +1,9 @@
 package com.doodle;
 
+import com.doodle.integration.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class MiniApplicationTests {
+class MiniApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {
