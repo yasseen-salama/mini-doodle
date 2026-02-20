@@ -3,6 +3,7 @@ package com.doodle.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -23,7 +25,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public abstract class AbstractIntegrationTest {
 
     static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine");
+            new PostgreSQLContainer<>("postgres:18.2-alpine3.23");
 
     static {
         POSTGRES.start();
@@ -32,7 +34,7 @@ public abstract class AbstractIntegrationTest {
     @LocalServerPort
     protected int port;
 
-    protected final RestTemplate restTemplate = new RestTemplate();
+    protected final RestTemplate restTemplate = new RestTemplate(new JdkClientHttpRequestFactory());
 
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -124,11 +126,15 @@ public abstract class AbstractIntegrationTest {
     }
 
     protected ResponseEntity<String> scheduleMeeting(TestUser user, UUID slotId, String title) {
+        return scheduleMeeting(user, slotId, title, List.of());
+    }
+
+    protected ResponseEntity<String> scheduleMeeting(TestUser user, UUID slotId, String title, List<UUID> participantIds) {
         Map<String, Object> request = Map.of(
                 "slotId", slotId,
                 "title", title,
                 "description", "integration test meeting",
-                "participantIds", java.util.List.of()
+                "participantIds", participantIds
         );
         return post("/api/meetings", request, user);
     }
