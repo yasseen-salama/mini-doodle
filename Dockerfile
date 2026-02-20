@@ -1,19 +1,17 @@
-# syntax=docker/dockerfile:1.7
+FROM gradle:8-jdk21-alpine AS builder
+WORKDIR /app
 
-FROM eclipse-temurin:21.0.10_7-jdk AS build
-WORKDIR /workspace
-
-COPY gradlew ./
-COPY gradle ./gradle
 COPY build.gradle settings.gradle ./
 COPY src ./src
 
-RUN chmod +x ./gradlew && ./gradlew --no-daemon bootJar
+RUN gradle bootJar --no-daemon
 
-FROM eclipse-temurin:21.0.10_7-jre
+FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
 
-COPY --from=build /workspace/build/libs/*.jar /app/app.jar
+RUN addgroup --system doodle && adduser --system --ingroup doodle doodle
+COPY --from=builder --chown=doodle:doodle /app/build/libs/*.jar /app/app.jar
 
+USER doodle
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
